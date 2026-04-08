@@ -8,11 +8,6 @@ Environment variables:
   MODEL_NAME       - Model or deployment name (default: openai/gpt-oss-120b:novita)
   HF_TOKEN         - Hugging Face token (used as API key)
   LOCAL_IMAGE_NAME - Docker image name when using from_docker_image() (optional)
-
-  # Azure OpenAI (optional, for local testing)
-  AZURE_OPENAI_ENDPOINT    - Set to enable AzureOpenAI client
-  AZURE_OPENAI_API_KEY     - Azure API key
-  AZURE_OPENAI_API_VERSION - Azure API version (default: 2024-12-01-preview)
 """
 
 import asyncio
@@ -22,7 +17,7 @@ import re
 import sys
 import time
 
-from openai import OpenAI, AzureOpenAI
+from openai import OpenAI
 
 # ── configuration ───────────────────────────────────────────────────
 
@@ -39,12 +34,6 @@ LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 # API key: prefer API_KEY, fall back to HF_TOKEN
 API_KEY = os.getenv("API_KEY") or HF_TOKEN or os.getenv("OPENAI_API_KEY", "")
-
-# Azure OpenAI (optional, for local testing with enterprise deployments)
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
-AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "")
 
 TASK_TIMEOUT = 360  # 6 minutes per task
 MAX_PARSE_RETRIES = 3
@@ -308,22 +297,11 @@ async def main() -> None:
         print("Set it to the environment server URL (e.g., http://localhost:8000)", file=sys.stderr)
         sys.exit(1)
 
-    if AZURE_OPENAI_ENDPOINT:
-        llm_client = AzureOpenAI(
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            api_key=AZURE_OPENAI_API_KEY or API_KEY,
-            api_version=AZURE_OPENAI_API_VERSION,
-        )
-        if AZURE_OPENAI_DEPLOYMENT:
-            global MODEL_NAME
-            MODEL_NAME = AZURE_OPENAI_DEPLOYMENT
-        print(f"Using Azure OpenAI: {AZURE_OPENAI_ENDPOINT} / deployment={MODEL_NAME}")
-    else:
-        llm_client = OpenAI(
-            base_url=API_BASE_URL,
-            api_key=API_KEY,
-        )
-        print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
+    llm_client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY,
+    )
+    print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
 
     scores: dict[int, float] = {}
     for task_id in [1, 2, 3]:

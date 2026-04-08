@@ -93,7 +93,7 @@ Per-step rewards provide partial credit signal:
 ## Running Inference
 
 Uses `OpenAI(base_url=...)` — compatible with HF Inference, OpenAI, and any
-OpenAI-compatible API. Azure OpenAI is supported via `AzureOpenAI` client.
+OpenAI-compatible API.
 
 ```bash
 # Environment server URL
@@ -103,11 +103,6 @@ export ENV_URL=http://localhost:8000
 export API_BASE_URL=https://router.huggingface.co/v1  # default, can omit
 export MODEL_NAME=openai/gpt-oss-120b:novita           # default, can omit
 export API_KEY=your-key      # or HF_TOKEN or OPENAI_API_KEY
-
-# Azure OpenAI (optional, set AZURE_OPENAI_ENDPOINT to enable)
-# export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-# export AZURE_OPENAI_API_KEY=your-azure-key
-# export MODEL_NAME=your-deployment-name
 
 pip install openai websockets
 python inference.py
