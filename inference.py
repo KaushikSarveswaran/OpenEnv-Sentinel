@@ -185,7 +185,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": build_initial_prompt(observation)},
         ]
-        final_score = 0.0
+        final_score = 1e-3
         local_step = 0  # track client-side loop iterations
         rewards_list: list[str] = []  # collect per-step rewards for [END] line
 
@@ -282,7 +282,10 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
         await ws.send(json.dumps({"type": "state"}))
         resp = json.loads(await ws.recv())
         state_data = resp["data"]
-        final_score = state_data.get("final_score", 0.0)
+        final_score = state_data.get("final_score", 1e-3)
+        # Ensure score is strictly between 0 and 1
+        _EPS = 1e-3
+        final_score = max(_EPS, min(1.0 - _EPS, final_score))
 
         # [END] — mandatory structured log
         print(f"[END] success={str(final_score > 0).lower()} steps={local_step} "
@@ -313,10 +316,10 @@ async def main() -> None:
             scores[task_id] = score
         except asyncio.TimeoutError:
             print(f"  Task {task_id} timed out after {TASK_TIMEOUT}s", file=sys.stderr)
-            scores[task_id] = 0.0
+            scores[task_id] = 1e-3
         except Exception as e:
             print(f"  Task {task_id} failed: {e}", file=sys.stderr)
-            scores[task_id] = 0.0
+            scores[task_id] = 1e-3
 
         print(f"Task {task_id}: {scores[task_id]:.2f}")
 

@@ -179,12 +179,12 @@ class SentinelEnvironment(Environment):
         if self._consecutive_invalid >= MAX_CONSECUTIVE_INVALID:
             done = True
             output = f"{output}\n\nEpisode terminated: {MAX_CONSECUTIVE_INVALID} consecutive invalid actions."
-            self._state.final_score = 0.0
+            self._state.final_score = 1e-3
 
         if step_num >= MAX_STEPS:
             done = True
             output = f"{output}\n\nEpisode terminated: maximum steps ({MAX_STEPS}) reached."
-            self._state.final_score = 0.0
+            self._state.final_score = 1e-3
 
         return self._make_obs(
             tool_output=output,

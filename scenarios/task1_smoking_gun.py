@@ -331,7 +331,8 @@ class SmokingGunScenario(BaseScenario):
         root_cause_correct = config_match and deploy_match
         recommendation_correct = rec_match
 
-        score = max(0.0, min(1.0, score))
+        _EPS = 1e-3
+        score = max(_EPS, min(1.0 - _EPS, score))
         return {
             "score": score,
             "root_cause_correct": root_cause_correct,

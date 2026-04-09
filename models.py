@@ -157,4 +157,4 @@ class SentinelState(State):
     resolution_submitted: bool = False
     root_cause_correct: bool = False
     recommendation_correct: bool = False
-    final_score: float = 0.0
+    final_score: float = 1e-3

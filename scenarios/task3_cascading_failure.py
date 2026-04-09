@@ -491,7 +491,8 @@ class CascadingFailureScenario(BaseScenario):
         root_cause_correct = pool_match and analytics_match
         recommendation_correct = kill_match and prevent_match
 
-        score = max(0.0, min(1.0, score))
+        _EPS = 1e-3
+        score = max(_EPS, min(1.0 - _EPS, score))
         return {
             "score": score,
             "root_cause_correct": root_cause_correct,
