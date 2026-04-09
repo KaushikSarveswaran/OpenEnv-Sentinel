@@ -22,7 +22,7 @@ from openai import OpenAI
 # ── configuration ───────────────────────────────────────────────────
 
 # Environment server URL (where the Sentinel env is running)
-ENV_URL = os.getenv("ENV_URL", "")
+ENV_URL = os.getenv("ENV_URL", "http://localhost:8000")
 
 # LLM configuration (aligned with official OpenEnv inference examples)
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
@@ -292,16 +292,12 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
 
 
 async def main() -> None:
-    if not ENV_URL:
-        print("ERROR: ENV_URL environment variable is required.", file=sys.stderr)
-        print("Set it to the environment server URL (e.g., http://localhost:8000)", file=sys.stderr)
-        sys.exit(1)
-
     llm_client = OpenAI(
         base_url=API_BASE_URL,
         api_key=API_KEY,
     )
     print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
+    print(f"Environment URL: {ENV_URL}")
 
     scores: dict[int, float] = {}
     for task_id in [1, 2, 3]:
