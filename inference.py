@@ -8,6 +8,12 @@ Environment variables:
   MODEL_NAME       - Model or deployment name (default: openai/gpt-oss-120b:novita)
   HF_TOKEN         - Hugging Face token (used as API key)
   LOCAL_IMAGE_NAME - Docker image name when using from_docker_image() (optional)
+
+  Azure OpenAI (used when AZURE_OPENAI_API_KEY is set):
+    AZURE_OPENAI_ENDPOINT    - Azure endpoint URL
+    AZURE_OPENAI_DEPLOYMENT  - Deployment / model name
+    AZURE_OPENAI_API_KEY     - Azure API key
+    AZURE_OPENAI_API_VERSION - API version (default: 2025-04-01-preview)
 """
 
 import asyncio
@@ -16,8 +22,9 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 
 # ── configuration ───────────────────────────────────────────────────
 
@@ -34,6 +41,13 @@ LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 # API key: prefer API_KEY, fall back to HF_TOKEN
 API_KEY = os.getenv("API_KEY") or HF_TOKEN or os.getenv("OPENAI_API_KEY", "")
+
+# Azure OpenAI configuration
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-04-01-preview")
+USE_AZURE = bool(AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT)
 
 TASK_TIMEOUT = 360  # 6 minutes per task
 MAX_PARSE_RETRIES = 3
@@ -162,8 +176,11 @@ def build_tool_response_prompt(observation: dict) -> str:
 
 # ── main loop ───────────────────────────────────────────────────────
 
-async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
-    """Run a single task against the environment via WebSocket. Returns grader score."""
+async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
+    """Run a single task against the environment via WebSocket.
+
+    Returns dict with keys: score (float), trace (dict with task-level explainability data).
+    """
     import websockets
 
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
@@ -179,6 +196,10 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
 
         # [START] — mandatory structured log
         print(f"[START] task=task_{task_id} env=sentinel_env model={MODEL_NAME}")
+
+        incident_summary = observation.get("incident_summary", "")
+        trace_steps: list[dict] = []
+        total_llm_calls = 0
 
         # Build multi-turn conversation
         messages: list[dict] = [
@@ -215,9 +236,19 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
             if len(call_messages) > 30:
                 call_messages = call_messages[:2] + call_messages[-20:]
 
+            # Snapshot messages sent to LLM (deep copy for trace)
+            messages_snapshot = [dict(m) for m in call_messages]
+
             # Try to get a valid action from the LLM
             action_dict = None
+            raw = ""
+            token_usage = None
+            llm_latency = 0.0
+            parse_attempts = 0
             for attempt in range(MAX_PARSE_RETRIES):
+                parse_attempts = attempt + 1
+                total_llm_calls += 1
+                t0 = time.time()
                 try:
                     # Run sync LLM call in a thread so the event loop can
                     # still handle WebSocket pings during long reasoning calls
@@ -227,7 +258,14 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
                         messages=call_messages,
                         max_completion_tokens=MAX_COMPLETION_TOKENS,
                     )
+                    llm_latency = round(time.time() - t0, 3)
                     raw = response.choices[0].message.content or ""
+                    if response.usage:
+                        token_usage = {
+                            "prompt_tokens": response.usage.prompt_tokens,
+                            "completion_tokens": response.usage.completion_tokens,
+                            "total_tokens": response.usage.total_tokens,
+                        }
                     action_dict = parse_action(raw)
                     if action_dict:
                         # Store the assistant response in conversation
@@ -243,6 +281,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
                                 {"role": "user", "content": "That was not valid JSON. Respond with ONLY a JSON object like {\"tool_name\": \"...\", \"parameters\": {...}}"},
                             ]
                 except Exception as e:
+                    llm_latency = round(time.time() - t0, 3)
                     print(f"  LLM error (attempt {attempt + 1}): {e}", file=sys.stderr)
 
             if action_dict is None:
@@ -267,7 +306,32 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
                 done = True
 
             step_reward = observation.get("reward", 0.0)
+            cumulative_reward = observation.get("cumulative_reward", 0.0)
             rewards_list.append(f"{step_reward:.2f}")
+
+            # Record trace for this step
+            trace_steps.append({
+                "step_number": step_num,
+                "llm_call": {
+                    "messages_sent": messages_snapshot,
+                    "raw_output": raw,
+                    "parse_attempts": parse_attempts,
+                    "forced_resolution": force_resolution,
+                    "latency_seconds": llm_latency,
+                    "token_usage": token_usage,
+                },
+                "parsed_action": {
+                    "tool_name": action_dict.get("tool_name"),
+                    "parameters": action_dict.get("parameters", {}),
+                },
+                "env_response": {
+                    "tool_output": observation.get("tool_output", ""),
+                    "reward": step_reward,
+                    "cumulative_reward": cumulative_reward,
+                    "done": done,
+                    "error": observation.get("last_action_error", ""),
+                },
+            })
 
             # [STEP] — mandatory structured log
             print(f"[STEP] step={step_num} action={action_dict.get('tool_name')} "
@@ -291,35 +355,68 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
         print(f"[END] success={str(final_score > 0).lower()} steps={local_step} "
               f"score={final_score:.2f} rewards={','.join(rewards_list)}")
 
-        return final_score
+        task_trace = {
+            "task_id": task_id,
+            "incident_summary": incident_summary,
+            "final_score": final_score,
+            "total_steps": local_step,
+            "total_llm_calls": total_llm_calls,
+            "steps": trace_steps,
+        }
+        return {"score": final_score, "trace": task_trace}
 
 
 async def main() -> None:
-    llm_client = OpenAI(
-        base_url=API_BASE_URL,
-        api_key=API_KEY,
-    )
-    print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
+    if USE_AZURE:
+        llm_client = AzureOpenAI(
+            azure_endpoint=AZURE_OPENAI_ENDPOINT,
+            api_key=AZURE_OPENAI_API_KEY,
+            api_version=AZURE_OPENAI_API_VERSION,
+        )
+        global MODEL_NAME
+        MODEL_NAME = AZURE_OPENAI_DEPLOYMENT
+        print(f"Using Azure OpenAI: {AZURE_OPENAI_ENDPOINT} / deployment={MODEL_NAME}")
+    else:
+        llm_client = OpenAI(
+            base_url=API_BASE_URL,
+            api_key=API_KEY,
+        )
+        print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
     print(f"Environment URL: {ENV_URL}")
 
     scores: dict[int, float] = {}
+    task_traces: list[dict] = []
+
     for task_id in [1, 2, 3]:
         print(f"\n{'='*50}")
         print(f"Running Task {task_id}...")
         print(f"{'='*50}")
 
         try:
-            score = await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 run_task(task_id, ENV_URL, llm_client),
                 timeout=TASK_TIMEOUT,
             )
-            scores[task_id] = score
+            scores[task_id] = result["score"]
+            task_traces.append(result["trace"])
         except asyncio.TimeoutError:
             print(f"  Task {task_id} timed out after {TASK_TIMEOUT}s", file=sys.stderr)
             scores[task_id] = 1e-3
+            task_traces.append({
+                "task_id": task_id, "incident_summary": "",
+                "final_score": 1e-3, "total_steps": 0,
+                "total_llm_calls": 0, "steps": [],
+                "error": f"Timed out after {TASK_TIMEOUT}s",
+            })
         except Exception as e:
             print(f"  Task {task_id} failed: {e}", file=sys.stderr)
             scores[task_id] = 1e-3
+            task_traces.append({
+                "task_id": task_id, "incident_summary": "",
+                "final_score": 1e-3, "total_steps": 0,
+                "total_llm_calls": 0, "steps": [],
+                "error": str(e),
+            })
 
         print(f"Task {task_id}: {scores[task_id]:.2f}")
 
@@ -330,6 +427,24 @@ async def main() -> None:
     print(f"Task 3: {scores.get(3, 0.0):.2f}")
     print(f"Average: {avg:.2f}")
     print(f"{'='*50}")
+
+    # Write explainability trace JSON
+    now = datetime.now(timezone.utc)
+    trace_output = {
+        "metadata": {
+            "model_name": MODEL_NAME,
+            "api_base_url": API_BASE_URL,
+            "env_url": ENV_URL,
+            "timestamp": now.isoformat(),
+            "total_tasks": len(scores),
+            "average_score": round(avg, 4),
+        },
+        "tasks": task_traces,
+    }
+    trace_filename = f"explainability_trace_{now.strftime('%Y%m%d_%H%M%S')}.json"
+    with open(trace_filename, "w") as f:
+        json.dump(trace_output, f, indent=2, default=str)
+    print(f"\nExplainability trace written to: {trace_filename}")
 
 
 if __name__ == "__main__":
