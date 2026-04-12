@@ -10,6 +10,7 @@ app = create_app(
     SentinelAction,
     SentinelObservation,
     env_name="sentinel_env",
+    max_concurrent_envs=10,
 )
 
 
@@ -17,7 +18,7 @@ def main():
     """Entry point for direct execution."""
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, ws_ping_interval=None)
 
 
 if __name__ == "__main__":
