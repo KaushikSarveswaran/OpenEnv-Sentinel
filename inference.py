@@ -1,13 +1,19 @@
 """Baseline inference script for OpenEnv-Sentinel.
 
-Drives an LLM agent through all 3 SRE incident triage tasks.
+Drives an LLM agent through all 5 SRE incident triage tasks.
 
-Environment variables:
+Environment variables (standard OpenAI-compatible):
   ENV_URL          - Sentinel environment server URL (e.g. http://localhost:8000)
   API_BASE_URL     - LLM API base URL (default: https://router.huggingface.co/v1)
-  MODEL_NAME       - Model or deployment name (default: openai/gpt-oss-120b:novita)
+  MODEL_NAME       - Model or deployment name
   HF_TOKEN         - Hugging Face token (used as API key)
-  LOCAL_IMAGE_NAME - Docker image name when using from_docker_image() (optional)
+  API_KEY          - API key override
+
+Environment variables (Azure OpenAI — takes priority when set):
+  AZURE_ENDPOINT     - Azure OpenAI endpoint (e.g. https://<resource>.openai.azure.com/)
+  AZURE_DEPLOYMENT   - Azure deployment name (e.g. gpt-4o-mini)
+  AZURE_API_KEY      - Azure OpenAI API key
+  AZURE_API_VERSION  - API version (e.g. 2024-12-01-preview)
 """
 
 import asyncio
@@ -17,22 +23,25 @@ import re
 import sys
 import time
 
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 
 # ── configuration ───────────────────────────────────────────────────
 
 # Environment server URL (where the Sentinel env is running)
 ENV_URL = os.getenv("ENV_URL", "http://localhost:8000")
 
-# LLM configuration (aligned with official OpenEnv inference examples)
+# Azure OpenAI config (takes priority when AZURE_ENDPOINT is set)
+AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT", "")
+AZURE_DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT", "")
+AZURE_API_KEY = os.getenv("AZURE_API_KEY", "")
+AZURE_API_VERSION = os.getenv("AZURE_API_VERSION", "2024-12-01-preview")
+
+USE_AZURE = bool(AZURE_ENDPOINT and AZURE_DEPLOYMENT and AZURE_API_KEY)
+
+# Standard OpenAI-compatible config (used when Azure is not configured)
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b:novita")
+MODEL_NAME = AZURE_DEPLOYMENT if USE_AZURE else os.getenv("MODEL_NAME", "openai/gpt-oss-120b:novita")
 HF_TOKEN = os.getenv("HF_TOKEN")
-
-# Optional — if you use from_docker_image():
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-
-# API key: prefer API_KEY, fall back to HF_TOKEN
 API_KEY = os.getenv("API_KEY") or HF_TOKEN or os.getenv("OPENAI_API_KEY", "")
 
 TASK_TIMEOUT = 360  # 6 minutes per task
@@ -295,15 +304,23 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
 
 
 async def main() -> None:
-    llm_client = OpenAI(
-        base_url=API_BASE_URL,
-        api_key=API_KEY,
-    )
-    print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
+    if USE_AZURE:
+        llm_client = AzureOpenAI(
+            azure_endpoint=AZURE_ENDPOINT,
+            api_key=AZURE_API_KEY,
+            api_version=AZURE_API_VERSION,
+        )
+        print(f"Using Azure OpenAI: {AZURE_ENDPOINT} / deployment={AZURE_DEPLOYMENT}")
+    else:
+        llm_client = OpenAI(
+            base_url=API_BASE_URL,
+            api_key=API_KEY,
+        )
+        print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
     print(f"Environment URL: {ENV_URL}")
 
     scores: dict[int, float] = {}
-    for task_id in [1, 2, 3]:
+    for task_id in [1, 2, 3, 4, 5]:
         print(f"\n{'='*50}")
         print(f"Running Task {task_id}...")
         print(f"{'='*50}")
@@ -325,9 +342,11 @@ async def main() -> None:
 
     avg = sum(scores.values()) / len(scores) if scores else 0.0
     print(f"\n{'='*50}")
-    print(f"Task 1: {scores.get(1, 0.0):.2f}")
-    print(f"Task 2: {scores.get(2, 0.0):.2f}")
-    print(f"Task 3: {scores.get(3, 0.0):.2f}")
+    print(f"Task 1 (The Smoking Gun):      {scores.get(1, 0.0):.2f}")
+    print(f"Task 2 (The Upstream Culprit): {scores.get(2, 0.0):.2f}")
+    print(f"Task 3 (The Cascading Failure):{scores.get(3, 0.0):.2f}")
+    print(f"Task 4 (The DDoS Attack):      {scores.get(4, 0.0):.2f}")
+    print(f"Task 5 (The Flash Sale Spike): {scores.get(5, 0.0):.2f}")
     print(f"Average: {avg:.2f}")
     print(f"{'='*50}")
 

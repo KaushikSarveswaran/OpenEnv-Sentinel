@@ -12,6 +12,8 @@ from models import SentinelAction, SentinelObservation, SentinelState
 from scenarios.task1_smoking_gun import SmokingGunScenario
 from scenarios.task2_upstream_culprit import UpstreamCulpritScenario
 from scenarios.task3_cascading_failure import CascadingFailureScenario
+from scenarios.task4_ddos_attack import DDoSAttackScenario
+from scenarios.task5_flash_sale_spike import FlashSaleSpikeScenario
 from tools.registry import AVAILABLE_TOOLS, dispatch, make_relevance_key
 
 MAX_STEPS = 20
@@ -21,12 +23,16 @@ SCENARIOS = {
     1: SmokingGunScenario,
     2: UpstreamCulpritScenario,
     3: CascadingFailureScenario,
+    4: DDoSAttackScenario,
+    5: FlashSaleSpikeScenario,
 }
 
 TASK_NAMES = {
     1: "The Smoking Gun",
     2: "The Upstream Culprit",
     3: "The Cascading Failure",
+    4: "The DDoS Attack",
+    5: "The Flash Sale Spike",
 }
 
 
