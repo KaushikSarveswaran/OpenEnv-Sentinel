@@ -298,25 +298,17 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> float:
 
         # [END] — mandatory structured log
         print(f"[END] success={str(final_score > 0).lower()} steps={local_step} "
-              f"score={final_score:.2f} rewards={','.join(rewards_list)}")
+              f"rewards={','.join(rewards_list)}")
 
         return final_score
 
 
 async def main() -> None:
-    if USE_AZURE:
-        llm_client = AzureOpenAI(
-            azure_endpoint=AZURE_ENDPOINT,
-            api_key=AZURE_API_KEY,
-            api_version=AZURE_API_VERSION,
-        )
-        print(f"Using Azure OpenAI: {AZURE_ENDPOINT} / deployment={AZURE_DEPLOYMENT}")
-    else:
-        llm_client = OpenAI(
-            base_url=API_BASE_URL,
-            api_key=API_KEY,
-        )
-        print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
+    llm_client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=HF_TOKEN,
+    )
+    print(f"Using LLM API: {API_BASE_URL} / model={MODEL_NAME}")
     print(f"Environment URL: {ENV_URL}")
 
     scores: dict[int, float] = {}
@@ -333,9 +325,11 @@ async def main() -> None:
             scores[task_id] = score
         except asyncio.TimeoutError:
             print(f"  Task {task_id} timed out after {TASK_TIMEOUT}s", file=sys.stderr)
+            print(f"[END] success=false steps=0 rewards=")
             scores[task_id] = 1e-3
         except Exception as e:
             print(f"  Task {task_id} failed: {e}", file=sys.stderr)
+            print(f"[END] success=false steps=0 rewards=")
             scores[task_id] = 1e-3
 
         print(f"Task {task_id}: {scores[task_id]:.2f}")

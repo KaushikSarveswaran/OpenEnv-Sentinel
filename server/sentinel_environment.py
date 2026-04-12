@@ -92,7 +92,7 @@ class SentinelEnvironment(Environment):
         self._state.tools_called.append("submit_resolution")
 
         return self._make_obs(
-            tool_output=f"Resolution graded. Score: {result['score']:.2f}",
+            tool_output=f"Resolution graded. Score: {result['score']:.4f}",
             done=True,
             reward=result["score"],
         )
@@ -138,7 +138,7 @@ class SentinelEnvironment(Environment):
                 incident_summary="",
                 last_action_error="Environment not reset. Call reset() first.",
                 done=True,
-                reward=0.0,
+                reward=1e-3,
             )
 
         self._state.step_count += 1
@@ -191,6 +191,9 @@ class SentinelEnvironment(Environment):
             done = True
             output = f"{output}\n\nEpisode terminated: maximum steps ({MAX_STEPS}) reached."
             self._state.final_score = 1e-3
+
+        if done:
+            reward = self._state.final_score
 
         return self._make_obs(
             tool_output=output,
