@@ -317,11 +317,11 @@ async def main() -> None:
         except asyncio.TimeoutError:
             print(f"  Task {task_id} timed out after {TASK_TIMEOUT}s", file=sys.stderr)
             print(f"[END] success=false steps=0 rewards=")
-            scores[task_id] = 0.0
+            scores[task_id] = 1e-3
         except Exception as e:
             print(f"  Task {task_id} failed: {e}", file=sys.stderr)
             print(f"[END] success=false steps=0 rewards=")
-            scores[task_id] = 0.0
+            scores[task_id] = 1e-3
 
         print(f"Task {task_id}: {scores[task_id]:.2f}")
 
