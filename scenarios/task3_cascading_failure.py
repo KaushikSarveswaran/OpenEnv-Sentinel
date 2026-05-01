@@ -390,7 +390,8 @@ class CascadingFailureScenario(BaseScenario):
             "get_dependency_map",
             "consult_runbook:connection pool",
             "get_service_status:analytics-worker",
-            "query_metrics:analytics-worker",
+            "query_metrics:analytics-worker:cpu",
+            "query_metrics:analytics-worker:memory",
             "check_recent_changes",
         ]
 

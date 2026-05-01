@@ -459,6 +459,7 @@ class UpstreamCulpritScenario(BaseScenario):
         return [
             "get_service_status:checkout-service",
             "query_logs:checkout-service",
+            "get_dependency_map",
             "get_dependency_map:checkout-service",
             "get_service_status:inventory-service",
             "query_logs:inventory-service",

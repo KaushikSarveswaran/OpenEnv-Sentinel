@@ -31,6 +31,7 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 try:
     from dotenv import load_dotenv
@@ -88,39 +89,49 @@ API_KEY = (
 )
 
 TASK_TIMEOUT = 360  # 6 minutes per task
-MAX_PARSE_RETRIES = 3
+
+# ── openenv.yaml inference config ───────────────────────────────────
+
+def _load_inference_config() -> dict:
+    """Read the inference: block from openenv.yaml. Returns {} on any error."""
+    try:
+        import yaml  # type: ignore[import]
+        _yaml_path = Path(__file__).parent / "openenv.yaml"
+        with open(_yaml_path) as _f:
+            _doc = yaml.safe_load(_f)
+        return (_doc or {}).get("inference", {}) or {}
+    except Exception:
+        return {}
+
+_INF_CFG = _load_inference_config()
+ENABLE_REASONING: bool = bool(_INF_CFG.get("enable_reasoning", False))
+PASS_REASONING_TO_LLM: bool = bool(_INF_CFG.get("pass_reasoning_to_llm", False))
+
+if PASS_REASONING_TO_LLM and not ENABLE_REASONING:
+    print(
+        "WARNING: pass_reasoning_to_llm has no effect when enable_reasoning is false",
+        file=sys.stderr,
+    )
+
+MAX_PARSE_RETRIES = 3       # retries for invalid/unparseable LLM output
 MAX_RATELIMIT_RETRIES = 8   # extra retries specifically for 429s (free-tier models)
 MAX_COMPLETION_TOKENS = 16384  # reasoning models need room for chain-of-thought
 
-SYSTEM_PROMPT = """You are an expert SRE agent triaging a production incident.
-You have access to diagnostic tools. Respond with ONLY a single JSON object — no markdown, no explanation, no extra text.
+SYSTEM_PROMPT = """You are an SRE agent investigating a production incident.
+Use the available diagnostic tools to identify the root cause and recommend a fix.
+Respond with ONLY a single JSON object — no markdown, no explanation, no extra text.
 
-Available tools:
-- get_service_status: {"tool_name": "get_service_status", "parameters": {"service": "<name>"}}
-- query_logs: {"tool_name": "query_logs", "parameters": {"service": "<name>", "query": "<text filter, use empty string for all logs>"}}
-- query_metrics: {"tool_name": "query_metrics", "parameters": {"service": "<name>", "metric": "<cpu|memory|error_rate|latency|connections>"}}
-- get_dependency_map: {"tool_name": "get_dependency_map", "parameters": {"service": "<name or omit for full map>"}}
-- consult_runbook: {"tool_name": "consult_runbook", "parameters": {"topic": "<search_topic>"}}
-- check_recent_changes: {"tool_name": "check_recent_changes", "parameters": {"service": "<name or omit for all>"}}
-- submit_resolution: {"tool_name": "submit_resolution", "parameters": {"root_cause": "<detailed explanation>", "affected_service": "<primary ROOT CAUSE service>", "recommendation": "<specific actionable fix>"}}
+Tool call format:  {"tool_name": "<name>", "parameters": {"<key>": "<value>", ...}}
+Resolution format: {"tool_name": "submit_resolution", "parameters": {"root_cause": "<explanation>", "affected_service": "<service>", "recommendation": "<fix>"}}
 
-INVESTIGATION PLAN — you have only 20 steps total, be extremely efficient:
-Step 1: get_dependency_map (no service param) to see full architecture
-Step 2: check_recent_changes (no service param) to see all recent deploys and changes
-Step 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident
-Step 5-6: query_logs for unhealthy services (use "" as query to get all logs)
-Step 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)
-Step 9: submit_resolution with your findings
+Respond with ONLY a JSON object. No markdown fences, no explanation."""
 
-CRITICAL RULES:
-- The ROOT CAUSE is often UPSTREAM — a dependency of the symptomatic service, not the alerted service itself
-- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries
-- affected_service MUST be the root-cause service, NOT the symptom service
-- root_cause must mention specific service names, error types, versions, and technical details
-- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)
-- Do NOT repeat the same tool call — you already have that data
-- You MUST call submit_resolution by step 10 at the latest — do not keep investigating
-- Respond with ONLY a JSON object. No markdown fences, no explanation."""
+if ENABLE_REASONING:
+    SYSTEM_PROMPT += (
+        '\n\nInclude a "reasoning" key as the FIRST field in every JSON response '
+        'explaining why you are taking this action. '
+        'Example: {"reasoning": "<your explanation>", "tool_name": "...", "parameters": {...}}'
+    )
 
 FORCE_RESOLUTION_PROMPT = """URGENT: You MUST call submit_resolution NOW. No more investigation.
 Synthesize everything you have gathered. Your response MUST be ONLY:
@@ -130,13 +141,21 @@ Do NOT call any other tool. Submit NOW."""
 
 # ── action parsing ──────────────────────────────────────────────────
 
-def parse_action(text: str) -> dict | None:
-    """Parse LLM output into an action dict with multiple fallbacks."""
+def parse_action(text: str) -> tuple[dict | None, str | None]:
+    """Parse LLM output into an action dict with multiple fallbacks.
+
+    Returns (action_dict, reasoning).  reasoning is the extracted "reasoning" key
+    (popped from the dict before returning) or None if absent.
+    """
+    def _extract(obj: dict) -> tuple[dict, str | None]:
+        reasoning = obj.pop("reasoning", None)
+        return obj, (str(reasoning) if reasoning is not None else None)
+
     # 1. Direct JSON parse
     try:
         obj = json.loads(text.strip())
         if isinstance(obj, dict) and "tool_name" in obj:
-            return obj
+            return _extract(obj)
     except json.JSONDecodeError:
         pass
 
@@ -146,7 +165,7 @@ def parse_action(text: str) -> dict | None:
         try:
             obj = json.loads(fence_match.group(1).strip())
             if isinstance(obj, dict) and "tool_name" in obj:
-                return obj
+                return _extract(obj)
         except json.JSONDecodeError:
             pass
 
@@ -156,11 +175,11 @@ def parse_action(text: str) -> dict | None:
         try:
             obj = json.loads(brace_match.group(0))
             if isinstance(obj, dict) and "tool_name" in obj:
-                return obj
+                return _extract(obj)
         except json.JSONDecodeError:
             pass
 
-    return None
+    return None, None
 
 
 # ── history management ──────────────────────────────────────────────
@@ -172,9 +191,35 @@ def build_initial_prompt(observation: dict) -> str:
 
     tool_descs = observation.get("tool_descriptions")
     if tool_descs:
-        parts.append("\n--- AVAILABLE TOOL PARAMETERS ---")
-        for tool, meta in tool_descs.items():
-            parts.append(f"  {tool}: {json.dumps(meta)}")
+        parts.append("\nAvailable tools and valid parameters:")
+        for tool_name, meta in tool_descs.items():
+            # Build a representative call example from metadata
+            params: dict = {}
+            services = meta.get("services", [])
+            if "service" not in meta and services:
+                # tools that take a service param
+                params["service"] = services[0] if services else "<service>"
+            if "metrics" in meta:
+                params["metric"] = "|".join(meta["metrics"])
+            if "severity_options" in meta:
+                params["severity"] = "|".join(meta.get("severity_options", []))
+            if "topics" in meta:
+                params["topic"] = "<topic>"
+            if meta.get("note") and "omit" in meta["note"].lower():
+                # tools where the param is optional (dependency map, recent changes)
+                params_str = json.dumps(params) if params else "{}"
+                parts.append(
+                    f'  {tool_name} (service optional): {{"tool_name": "{tool_name}", "parameters": {params_str}}}'
+                )
+                continue
+            if services:
+                params["service"] = services[0]
+            if not params:
+                parts.append(f'  {tool_name}: {{"tool_name": "{tool_name}", "parameters": {{}}}}')
+            else:
+                parts.append(
+                    f'  {tool_name}: {{"tool_name": "{tool_name}", "parameters": {json.dumps(params)}}}'
+                )
 
     parts.append(
         f"\nStep {observation.get('step_number', 0)}/{observation.get('max_steps', 20)}"
@@ -183,9 +228,12 @@ def build_initial_prompt(observation: dict) -> str:
     return "\n".join(parts)
 
 
-def build_tool_response_prompt(observation: dict) -> str:
+def build_tool_response_prompt(observation: dict, prior_reasoning: str | None = None) -> str:
     """Build a follow-up user prompt after a tool call."""
     parts = []
+
+    if PASS_REASONING_TO_LLM and prior_reasoning:
+        parts.append(f"Your prior reasoning: {prior_reasoning}\n")
 
     tool_output = observation.get("tool_output", "")
     if tool_output:
@@ -280,6 +328,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
 
             # Try to get a valid action from the LLM
             action_dict = None
+            step_reasoning: str | None = None
             raw = ""
             token_usage = None
             llm_latency = 0.0
@@ -306,7 +355,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
                             "completion_tokens": response.usage.completion_tokens,
                             "total_tokens": response.usage.total_tokens,
                         }
-                    action_dict = parse_action(raw)
+                    action_dict, step_reasoning = parse_action(raw)
                     if action_dict:
                         # Store the assistant response in conversation
                         messages.append({"role": "assistant", "content": raw})
@@ -367,8 +416,8 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
             if observation.get("done"):
                 done = True
 
-            _raw_reward = data.get("reward")
-            step_reward = float(_raw_reward) if _raw_reward is not None else 0.0
+            _raw_reward = data.get("reward", 0.0)
+            step_reward = float(_raw_reward)
             cumulative_reward = observation.get("cumulative_reward", 0.0)
             rewards_list.append(f"{step_reward:.2f}")
 
@@ -378,6 +427,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
                 "llm_call": {
                     "messages_sent": messages_snapshot,
                     "raw_output": raw,
+                    "reasoning": step_reasoning,
                     "parse_attempts": parse_attempts,
                     "forced_resolution": force_resolution,
                     "latency_seconds": llm_latency,
@@ -393,6 +443,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
                     "cumulative_reward": cumulative_reward,
                     "done": done,
                     "error": observation.get("last_action_error", ""),
+                    **({"reward_breakdown": observation["reward_breakdown"]} if observation.get("reward_breakdown") else {}),
                 },
             })
 
@@ -403,7 +454,7 @@ async def run_task(task_id: int, base_url: str, client: OpenAI) -> dict:
 
             # Add tool response as user message in the conversation
             if not done:
-                messages.append({"role": "user", "content": build_tool_response_prompt(observation)})
+                messages.append({"role": "user", "content": build_tool_response_prompt(observation, step_reasoning)})
 
         # Get final state for score
         await ws.send(json.dumps({"type": "state"}))

@@ -69,7 +69,6 @@ class TestSubmit:
         )
         obs = env.step(action)
         assert obs.done is True
-        assert obs.reward is not None
         assert obs.reward > 0
 
     def test_submit_missing_fields(self, env):

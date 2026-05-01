@@ -4,3 +4,11 @@ type: space
 runtime: fastapi
 app: server.app:app
 port: 8000
+
+inference:
+  # When true, the LLM is instructed to include a "reasoning" field in each JSON response.
+  # Captured reasoning is stored in the explainability trace and shown in the UI.
+  enable_reasoning: true
+  # When true, the reasoning from the previous step is echoed back to the LLM in the next
+  # turn's user message. Has no effect when enable_reasoning is false.
+  pass_reasoning_to_llm: true

@@ -7,18 +7,83 @@ interface Props {
   onBack: () => void;
 }
 
+function LlmResponseBlock({ raw }: { raw: string }) {
+  if (!raw) return <></>;
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return <pre className="raw-output">{raw}</pre>;
+  }
+
+  const { reasoning, tool_name, parameters, ...rest } = parsed as {
+    reasoning?: unknown;
+    tool_name?: unknown;
+    parameters?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+
+  return (
+    <div className="llm-resp-block">
+      {reasoning != null && (
+        <div className="llm-field" style={{ flexDirection: "column" }}>
+          <span className="llm-label llm-label-reasoning">reasoning</span>
+          <div className="llm-reasoning-text">{String(reasoning)}</div>
+        </div>
+      )}
+      {tool_name != null && (
+        <div className="llm-field">
+          <span className="llm-label llm-label-tool">{String(tool_name)}</span>
+        </div>
+      )}
+      {parameters != null && typeof parameters === "object" && (
+        <div className="llm-field" style={{ flexDirection: "column" }}>
+          <div className="llm-params">
+            {Object.entries(parameters).map(([k, v]) => (
+              <div key={k} className="llm-param-row">
+                <span className="llm-param-key">{k}</span>
+                <span className="llm-param-val">
+                  {typeof v === "string" ? v : JSON.stringify(v)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {Object.entries(rest).map(([k, v]) => (
+        <div key={k} className="llm-field">
+          <span className="llm-label llm-label-generic">{k}</span>
+          <span className="llm-value">
+            {typeof v === "string" ? v : JSON.stringify(v)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StepDetail({ step }: { step: TraceStep }) {
   const [showMessages, setShowMessages] = useState(false);
   const [showFullOutput, setShowFullOutput] = useState(false);
+  const [showReasoning, setShowReasoning] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const toolOutput = step.env_response.tool_output;
   const outputTruncated = toolOutput && toolOutput.length > 500;
+  const reasoning = step.llm_call.reasoning;
+  const breakdown = step.env_response.reward_breakdown;
 
   return (
     <div className="step-detail">
       <div className="step-header">
         <span className="step-tool">{step.parsed_action.tool_name}</span>
         <span className="step-reward">reward: {step.env_response.reward.toFixed(2)}</span>
+        {breakdown && (
+          <button className="btn btn-xs btn-breakdown" onClick={() => setShowBreakdown(!showBreakdown)}>
+            {showBreakdown ? "▾ why?" : "▸ why?"}
+          </button>
+        )}
         <span className="step-latency">{step.llm_call.latency_seconds}s</span>
         {step.llm_call.token_usage && (
           <span className="step-tokens">{step.llm_call.token_usage.total_tokens} tok</span>
@@ -29,6 +94,36 @@ function StepDetail({ step }: { step: TraceStep }) {
       <div className="step-params">
         <strong>Parameters:</strong> <code>{JSON.stringify(step.parsed_action.parameters)}</code>
       </div>
+      {breakdown && showBreakdown && (
+        <div className="step-breakdown">
+          <div className="breakdown-reason">{breakdown.reason}</div>
+          <table className="breakdown-table">
+            <tbody>
+              {breakdown.components.map((c, i) => (
+                <tr key={i} className={`breakdown-row breakdown-${breakdown.classification}`}>
+                  <td className="breakdown-label">{c.label}</td>
+                  <td className={`breakdown-value ${c.value >= 0 ? "pos" : "neg"}`}>
+                    {c.value >= 0 ? "+" : ""}{c.value.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {reasoning && (
+        <div className="step-reasoning">
+          <button className="btn btn-sm" onClick={() => setShowReasoning(!showReasoning)}>
+            {showReasoning ? "Hide Reasoning" : "Show Reasoning"}
+          </button>
+          {showReasoning && (
+            <>
+              <strong>Reasoning:</strong>
+              <pre className="reasoning-output">{reasoning}</pre>
+            </>
+          )}
+        </div>
+      )}
       {toolOutput && (
         <div className="step-tool-output">
           <strong>Tool Output:</strong>
@@ -66,7 +161,7 @@ function StepDetail({ step }: { step: TraceStep }) {
             ))}
           </pre>
           <h5>Raw Output</h5>
-          <pre className="raw-output">{step.llm_call.raw_output}</pre>
+          <LlmResponseBlock raw={step.llm_call.raw_output} />
         </div>
       )}
     </div>

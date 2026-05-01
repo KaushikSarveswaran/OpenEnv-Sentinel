@@ -51,6 +51,7 @@ export interface TraceStep {
   llm_call: {
     messages_sent: { role: string; content: string }[];
     raw_output: string;
+    reasoning: string | null;
     parse_attempts: number;
     forced_resolution: boolean;
     latency_seconds: number;
@@ -66,7 +67,19 @@ export interface TraceStep {
     cumulative_reward: number;
     done: boolean;
     error: string;
+    reward_breakdown?: RewardBreakdown;
   };
+}
+
+export interface RewardComponent {
+  label: string;
+  value: number;
+}
+
+export interface RewardBreakdown {
+  components: RewardComponent[];
+  classification: string;
+  reason: string;
 }
 
 export interface TraceTask {

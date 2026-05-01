@@ -143,9 +143,10 @@ class SentinelObservation(Observation):
     step_number: int = Field(default=0, description="Current step number")
     max_steps: int = Field(default=20, description="Maximum steps per episode")
     cumulative_reward: float = Field(default=0.0, description="Running total of per-step rewards")
-    reward: Optional[float] = Field(default=None, description="Per-step reward for the last action")
+    reward: float = Field(default=0.0, description="Per-step reward for the last action")
     last_action_error: str = Field(default="", description="Error from last invalid action")
     tool_descriptions: dict = Field(default_factory=dict, description="Parameter metadata (populated on reset only)")
+    reward_breakdown: Optional[dict] = Field(default=None, description="Structured reward breakdown for the last step")
 
 
 class SentinelState(State):

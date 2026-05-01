@@ -2,6 +2,57 @@
 
 import pytest
 
+from grading.rewards import compute_step_reward, REWARD_RELEVANT, REWARD_IRRELEVANT, REWARD_REPEATED, REWARD_INVALID, REWARD_STEP_COST
+
+
+class TestComputeStepReward:
+    RELEVANT_TOOLS = ["query_logs:auth-service", "get_service_status:payment-api"]
+
+    def test_relevant_call(self):
+        reward, breakdown = compute_step_reward(
+            "query_logs", {"service": "auth-service"}, True, self.RELEVANT_TOOLS, []
+        )
+        assert reward == pytest.approx(REWARD_STEP_COST + REWARD_RELEVANT)
+        assert breakdown.classification == "relevant"
+        assert any(c.label == "relevant" for c in breakdown.components)
+        assert any(c.label == "step_cost" for c in breakdown.components)
+        assert "relevant" in breakdown.reason
+        assert "auth-service" in breakdown.reason
+
+    def test_irrelevant_call(self):
+        reward, breakdown = compute_step_reward(
+            "consult_runbook", {"topic": "dns"}, True, self.RELEVANT_TOOLS, []
+        )
+        assert reward == pytest.approx(REWARD_STEP_COST + REWARD_IRRELEVANT)
+        assert breakdown.classification == "irrelevant"
+        assert any(c.label == "irrelevant" for c in breakdown.components)
+        assert "irrelevant" in breakdown.reason
+
+    def test_repeated_call(self):
+        sig = "query_logs:auth-service"
+        reward, breakdown = compute_step_reward(
+            "query_logs", {"service": "auth-service"}, True, self.RELEVANT_TOOLS, [sig]
+        )
+        assert reward == pytest.approx(REWARD_STEP_COST + REWARD_REPEATED)
+        assert breakdown.classification == "repeated"
+        assert any(c.label == "repeated" for c in breakdown.components)
+        assert "repeated" in breakdown.reason
+
+    def test_invalid_action(self):
+        reward, breakdown = compute_step_reward(
+            "bad_tool", {}, False, self.RELEVANT_TOOLS, []
+        )
+        assert reward == pytest.approx(REWARD_STEP_COST + REWARD_INVALID)
+        assert breakdown.classification == "invalid"
+        assert any(c.label == "invalid" for c in breakdown.components)
+        assert "invalid" in breakdown.reason
+
+    def test_components_sum_to_reward(self):
+        reward, breakdown = compute_step_reward(
+            "query_logs", {"service": "auth-service"}, True, self.RELEVANT_TOOLS, []
+        )
+        assert sum(c.value for c in breakdown.components) == pytest.approx(reward)
+
 
 class TestTask1Grading:
     def test_perfect_resolution(self, task1):

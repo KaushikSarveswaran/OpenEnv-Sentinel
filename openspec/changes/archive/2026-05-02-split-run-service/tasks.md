@@ -27,5 +27,5 @@
 
 - [x] 5.1 Run `npx tsc --noEmit` — verify TypeScript compiles
 - [x] 5.2 Run `npm run build` — rebuild static assets
-- [ ] 5.3 Start both services, run inference, switch to History tab during run, confirm traces load immediately
+- [x] 5.3 Start both services, run inference, switch to History tab during run, confirm traces load immediately
 - [x] 5.4 Update `UI_GUIDE.md` with two-service architecture and why it was adopted

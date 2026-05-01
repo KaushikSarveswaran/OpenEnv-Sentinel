@@ -7,7 +7,7 @@ from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import Observation
 
 from grading.grader import grade
-from grading.rewards import compute_step_reward, _call_signature, _is_relevant
+from grading.rewards import compute_step_reward, _call_signature, _is_relevant, RewardBreakdown
 from models import SentinelAction, SentinelObservation, SentinelState
 from scenarios.task1_smoking_gun import SmokingGunScenario
 from scenarios.task2_upstream_culprit import UpstreamCulpritScenario
@@ -51,9 +51,11 @@ class SentinelEnvironment(Environment):
         tool_output: str = "",
         error: str = "",
         done: bool = False,
-        reward: Optional[float] = None,
+        reward: float = 0.0,
         tool_descriptions: Optional[dict] = None,
+        reward_breakdown: Optional[RewardBreakdown] = None,
     ) -> SentinelObservation:
+        import dataclasses
         return SentinelObservation(
             incident_summary=self._scenario.get_incident_summary() if self._scenario else "",
             tool_output=tool_output,
@@ -65,6 +67,7 @@ class SentinelEnvironment(Environment):
             done=done,
             reward=reward,
             tool_descriptions=tool_descriptions or {},
+            reward_breakdown=dataclasses.asdict(reward_breakdown) if reward_breakdown is not None else None,
         )
 
     def _handle_submit(self, params: dict, step_num: int) -> SentinelObservation:
@@ -117,7 +120,6 @@ class SentinelEnvironment(Environment):
 
         return self._make_obs(
             done=False,
-            reward=None,
             tool_descriptions=self._scenario.get_tool_descriptions(),
         )
 
@@ -154,7 +156,7 @@ class SentinelEnvironment(Environment):
             self._consecutive_invalid = 0
 
         # compute reward
-        reward = compute_step_reward(
+        reward, breakdown = compute_step_reward(
             tool_name,
             params,
             is_valid,
@@ -191,6 +193,7 @@ class SentinelEnvironment(Environment):
             error=error_msg,
             done=done,
             reward=reward,
+            reward_breakdown=breakdown,
         )
 
     @property

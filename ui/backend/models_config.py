@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -47,6 +48,18 @@ class RunRequest(BaseModel):
     env_url: str = "http://localhost:8000"
 
 
+def _read_inference_config() -> dict:
+    """Read inference: block from openenv.yaml. Returns {} on any error."""
+    try:
+        import yaml  # type: ignore[import]
+        _p = Path(__file__).resolve().parent.parent.parent / "openenv.yaml"
+        with open(_p) as _f:
+            _doc = yaml.safe_load(_f)
+        return (_doc or {}).get("inference", {}) or {}
+    except Exception:
+        return {}
+
+
 def get_defaults() -> dict:
     env_model = os.getenv("MODEL_NAME", "")
     default_openrouter_model = "google/gemma-4-31b-it:free"
@@ -68,4 +81,5 @@ def get_defaults() -> dict:
             "free_models": OPENROUTER_FREE_MODELS,
         },
         "env_url": os.getenv("ENV_URL", "http://localhost:8000"),
+        "inference": _read_inference_config(),
     }

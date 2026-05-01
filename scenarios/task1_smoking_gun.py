@@ -244,6 +244,7 @@ class SmokingGunScenario(BaseScenario):
 
     def get_relevant_tools(self) -> list[str]:
         return [
+            "get_dependency_map",
             "get_service_status:payment-api",
             "query_logs:payment-api",
             "check_recent_changes:payment-api",
