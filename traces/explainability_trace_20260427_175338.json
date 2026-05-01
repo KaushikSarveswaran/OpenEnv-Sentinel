@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "model_name": "qwen/qwen3-next-80b-a3b-instruct:free",
+    "api_base_url": "https://openrouter.ai/api/v1",
+    "env_url": "http://localhost:8000",
+    "timestamp": "2026-04-27T17:53:38.528065+00:00",
+    "total_tasks": 3,
+    "average_score": 0.001,
+    "status": "complete"
+  },
+  "tasks": [
+    {
+      "task_id": 1,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Timed out after 360s"
+    },
+    {
+      "task_id": 2,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Timed out after 360s"
+    },
+    {
+      "task_id": 3,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Timed out after 360s"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+context: |
+  Tech stack: Python (FastAPI, uvicorn), React 19, TypeScript, Vite
+  UI lives in ui/frontend (React SPA) and ui/backend (FastAPI, two-service split: :8501 UI, :8502 run service)
+  Frontend is a compiled SPA served as static files from ui/backend/static/
+  URL routing: hash-based (no react-router). The App.tsx reads window.location.hash on load and listens
+    for hashchange events. Views map to: # → run, #history → history, #trace → trace, #compare → compare.
+    All navigation uses the navigate() helper which updates both window.location.hash and React state.
+  API: UI calls use relative /api paths; run-service calls use absolute http://localhost:8502 to get
+    independent browser connection pools (avoids SSE blocking other fetches).
+  Traces stored as JSON in traces/ at project root.
+  Inference entrypoint: inference.py. Environment server: server/app.py (:8000).
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

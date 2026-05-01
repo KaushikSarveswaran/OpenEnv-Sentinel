@@ -27,9 +27,10 @@ dev = [
 
 [project.scripts]
 server = "server.app:main"
+sentinel-ui = "ui.backend.app:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-include = ["openenv_sentinel*", "server*", "scenarios*", "tools*", "grading*"]
+include = ["openenv_sentinel*", "server*", "scenarios*", "tools*", "grading*", "ui*"]

@@ -282,88 +282,196 @@ docker images sentinel-env
 
 The inference script drives an LLM through all 3 tasks via WebSocket.
 
-### 6.1 Set environment variables
+This section is a practical local activation flow for:
+- Activating the RL environment server
+- Activating an LLM API provider
+- Running inference across multiple models
 
-The inference script supports **HF Inference** (default), **OpenAI**, and **Azure OpenAI** endpoints.
+### 6.1 Understand the two endpoints
 
-> **Important:** `ENV_URL` is the Sentinel environment server. `API_BASE_URL` is
-> the LLM API endpoint (matching the official OpenEnv inference pattern).
+- `ENV_URL` points to the Sentinel RL environment server (local FastAPI/WebSocket app)
+- `API_BASE_URL` points to the LLM provider endpoint (HF router, OpenAI, etc.)
 
-**Option A — HF Inference API (default, for hackathon submission):**
+These are different systems and both must be configured correctly.
+
+### 6.2 Terminal A — activate Python env and start the RL environment
 
 ```bash
-export ENV_URL=http://localhost:8000                        # env server
-export API_BASE_URL=https://router.huggingface.co/v1        # default, can omit
-export MODEL_NAME=openai/gpt-oss-120b:novita                # default, can omit
-export HF_TOKEN=hf_...                                      # or API_KEY
+cd openenv-sentinel
+source .venv/bin/activate
+
+# Install inference deps if needed
+pip install openai websockets
+
+# Start RL environment server
+uvicorn server.app:app --host 0.0.0.0 --port 8000
 ```
 
-**Option B — OpenAI:**
+In a second shell, verify:
 
 ```bash
+curl http://localhost:8000/health
+# expected: {"status":"ok"}
+```
+
+### 6.3 Terminal B — activate Python env and configure LLM provider
+
+```bash
+cd openenv-sentinel
+source .venv/bin/activate
 export ENV_URL=http://localhost:8000
+```
+
+Choose exactly one provider profile below.
+
+#### Option A — Hugging Face Router (default)
+
+```bash
+export API_BASE_URL=https://router.huggingface.co/v1
+export MODEL_NAME=openai/gpt-oss-120b:novita
+export HF_TOKEN=hf_...
+
+# Optional compatibility alias
+export API_KEY="$HF_TOKEN"
+```
+
+#### Option B — OpenAI API
+
+```bash
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o
 export API_KEY=sk-...
+
+# Prevent stale HF credentials from being used accidentally
+unset HF_TOKEN
 ```
 
-**Option C — Azure OpenAI (for local/enterprise testing):**
+#### Option C — OpenRouter
 
 ```bash
-export ENV_URL=http://localhost:8000
+export API_BASE_URL=https://openrouter.ai/api/v1
+export MODEL_NAME=openai/gpt-4o-mini
+export API_KEY=sk-or-...
+
+# Optional aliases if your key is stored under OPENROUTER_API_KEY
+export API_KEY="${OPENROUTER_API_KEY:-$API_KEY}"
+
+# Prevent stale HF credentials from being used accidentally
+unset HF_TOKEN
+```
+
+#### Option D — Azure OpenAI
+
+```bash
 export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 export AZURE_OPENAI_API_KEY=your-azure-key
-export MODEL_NAME=your-deployment-name      # Azure deployment name
-export AZURE_OPENAI_API_VERSION=2024-12-01-preview  # optional, this is the default
+export MODEL_NAME=your-deployment-name
+export AZURE_OPENAI_API_VERSION=2025-04-01-preview
+
+# Optional: avoid conflicts with non-Azure vars
+unset API_BASE_URL
+unset API_KEY
+unset HF_TOKEN
 ```
 
-> When `AZURE_OPENAI_ENDPOINT` is set, the script uses `AzureOpenAI` client.
-> Otherwise it uses `OpenAI(base_url=API_BASE_URL, api_key=...)` — which
-> covers both HF router and direct OpenAI.
+Notes:
+- When Azure variables are set, `inference.py` uses the Azure client.
+- Otherwise it uses `OpenAI(base_url=API_BASE_URL, api_key=...)`, covering HF router, OpenAI, and OpenRouter.
 
-### 6.2 Install inference dependencies
+### 6.4 Preflight checks before running inference
 
 ```bash
-pip install openai websockets
+# RL environment reachable?
+curl -s http://localhost:8000/health
+
+# Required credentials present?
+if [[ -n "$AZURE_OPENAI_API_KEY" ]]; then
+    echo "Using Azure OpenAI"
+elif [[ -n "$API_KEY" || -n "$HF_TOKEN" ]]; then
+    echo "Using OpenAI-compatible endpoint"
+else
+    echo "Missing LLM credentials (set API_KEY or HF_TOKEN or AZURE_OPENAI_API_KEY)"
+fi
 ```
 
-### 6.3 Run
+### 6.5 Run local inference
 
 ```bash
 python inference.py
 ```
 
-Expected output:
+Expected shape of output:
 
 ```
+Using LLM API: ... / model=...
+Environment URL: http://localhost:8000
+
 ==================================================
 Running Task 1...
 ==================================================
-Task 1: 0.85
+...
+Task 1: <score>
 
 ==================================================
 Running Task 2...
 ==================================================
-Task 2: 0.65
+...
+Task 2: <score>
 
 ==================================================
 Running Task 3...
 ==================================================
-Task 3: 0.40
+...
+Task 3: <score>
 
 ==================================================
-Task 1: 0.85
-Task 2: 0.65
-Task 3: 0.40
-Average: 0.63
+Task 1: <score>
+Task 2: <score>
+Task 3: <score>
+Average: <score>
 ==================================================
 ```
 
-### 6.4 Inference against a remote HF Space
+The script also writes an explainability trace file:
+
+```text
+explainability_trace_YYYYMMDD_HHMMSS.json
+```
+
+### 6.6 Run across multiple models (same provider)
+
+Use one provider config, then sweep models:
 
 ```bash
-# HF model via HF router (hackathon default)
+for model in \
+    openai/gpt-oss-120b:novita \
+    meta-llama/Llama-3.3-70B-Instruct \
+    mistralai/Mixtral-8x7B-Instruct-v0.1
+do
+    export MODEL_NAME="$model"
+    echo "Running model: $MODEL_NAME"
+    python inference.py | tee "run_${MODEL_NAME//\//_}.log"
+done
+```
+
+### 6.7 Switch providers cleanly
+
+Before switching provider families, clear conflicting env vars:
+
+```bash
+unset AZURE_OPENAI_ENDPOINT AZURE_OPENAI_API_KEY AZURE_OPENAI_API_VERSION
+unset API_BASE_URL API_KEY HF_TOKEN
+```
+
+Then apply exactly one provider profile from section 6.3.
+
+### 6.8 Inference against a remote HF Space
+
+```bash
+# HF model via HF router
 export ENV_URL=https://your-username-sentinel-env.hf.space
+export API_BASE_URL=https://router.huggingface.co/v1
+export MODEL_NAME=openai/gpt-oss-120b:novita
 export HF_TOKEN=hf_...
 python inference.py
 
@@ -372,6 +480,15 @@ export ENV_URL=https://your-username-sentinel-env.hf.space
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o
 export API_KEY=sk-...
+unset HF_TOKEN
+python inference.py
+
+# OpenRouter model
+export ENV_URL=https://your-username-sentinel-env.hf.space
+export API_BASE_URL=https://openrouter.ai/api/v1
+export MODEL_NAME=openai/gpt-4o-mini
+export API_KEY=sk-or-...
+unset HF_TOKEN
 python inference.py
 
 # Azure OpenAI
@@ -513,10 +630,13 @@ python inference.py
 | `openenv validate` fails with "no main() found" | Ensure `server/app.py` has a `def main()` function and `[project.scripts]` in pyproject.toml |
 | `openenv validate` fails with "uv.lock not found" | Run `pip install uv && uv lock` |
 | WebSocket connection refused | Server must be running (`uvicorn server.app:app --port 8000`) |
+| `Connect call failed ('127.0.0.1', 8000)` in inference | RL environment server is down. Start it in another terminal, then retry |
 | HTTP `/step` returns fresh state (not continuing episode) | HTTP endpoints are stateless. Use WebSocket `/ws` for multi-step episodes |
 | Docker build fails on `COPY` | Run `docker build` from the project root (not from `server/`) |
 | Docker healthcheck failing | Ensure `curl` is installed in the image (the Dockerfile does this) |
 | `inference.py` error: "ENV_URL required" | `export ENV_URL=http://localhost:8000` |
+| HF Router returns 401 Unauthorized HTML | Set `HF_TOKEN` (or `API_KEY`) in the same shell where inference runs |
+| OpenRouter 401/403 | Verify `API_BASE_URL=https://openrouter.ai/api/v1`, `API_KEY`, and model access on your OpenRouter account |
 | Azure OpenAI 401 / auth error | Verify `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and that `MODEL_NAME` matches your deployment name |
 | HF Space shows "Building" forever | Check the Logs tab for build errors. Common: missing files in COPY |
 | HF Space returns 502 | The app hasn't started yet (cold start) or crashed. Check runtime logs |
@@ -540,6 +660,8 @@ docker run -p 8000:8000 sentinel-env
 
 # ── Inference (HF router — hackathon default) ──
 export ENV_URL=http://localhost:8000
+export API_BASE_URL=https://router.huggingface.co/v1
+export MODEL_NAME=openai/gpt-oss-120b:novita
 export HF_TOKEN=hf_...
 python inference.py
 
@@ -548,6 +670,13 @@ export ENV_URL=http://localhost:8000
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o
 export API_KEY=sk-...
+python inference.py
+
+# ── Inference (OpenRouter) ──
+export ENV_URL=http://localhost:8000
+export API_BASE_URL=https://openrouter.ai/api/v1
+export MODEL_NAME=openai/gpt-4o-mini
+export API_KEY=sk-or-...
 python inference.py
 
 # ── Inference (Azure OpenAI) ──

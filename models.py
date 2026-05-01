@@ -3,7 +3,7 @@
 Typed discriminated union for actions — each tool has its own action + params class.
 """
 
-from typing import Annotated, List, Literal, Union
+from typing import Annotated, List, Literal, Optional, Union
 
 from openenv.core.env_server.types import Action, Observation, State
 from pydantic import BaseModel, Field, RootModel
@@ -143,6 +143,7 @@ class SentinelObservation(Observation):
     step_number: int = Field(default=0, description="Current step number")
     max_steps: int = Field(default=20, description="Maximum steps per episode")
     cumulative_reward: float = Field(default=0.0, description="Running total of per-step rewards")
+    reward: Optional[float] = Field(default=None, description="Per-step reward for the last action")
     last_action_error: str = Field(default="", description="Error from last invalid action")
     tool_descriptions: dict = Field(default_factory=dict, description="Parameter metadata (populated on reset only)")
 

@@ -1,0 +1,1007 @@
+{
+  "metadata": {
+    "model_name": "inclusionai/ling-2.6-1t:free",
+    "api_base_url": "https://router.huggingface.co/v1",
+    "env_url": "http://localhost:8000",
+    "timestamp": "2026-04-26T19:30:47.567648+00:00",
+    "total_tasks": 3,
+    "average_score": 0.3173
+  },
+  "tasks": [
+    {
+      "task_id": 1,
+      "incident_summary": "CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.",
+      "final_score": 0.9500000000000001,
+      "total_steps": 12,
+      "total_llm_calls": 12,
+      "steps": [
+        {
+          "step_number": 0,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.692,
+            "token_usage": {
+              "prompt_tokens": 851,
+              "completion_tokens": 17,
+              "total_tokens": 868
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_dependency_map",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "payment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service",
+            "reward": 0.0,
+            "cumulative_reward": -0.03,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 1,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.159,
+            "token_usage": {
+              "prompt_tokens": 992,
+              "completion_tokens": 18,
+              "total_tokens": 1010
+            }
+          },
+          "parsed_action": {
+            "tool_name": "check_recent_changes",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "No recent changes found for service ''.",
+            "reward": 0.0,
+            "cumulative_reward": -0.06,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 2,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.16,
+            "token_usage": {
+              "prompt_tokens": 1060,
+              "completion_tokens": 22,
+              "total_tokens": 1082
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_service_status",
+            "parameters": {
+              "service": "payment-api"
+            }
+          },
+          "env_response": {
+            "tool_output": "Service: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections",
+            "reward": 0.0,
+            "cumulative_reward": 0.05,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 3,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.52,
+            "token_usage": {
+              "prompt_tokens": 1207,
+              "completion_tokens": 23,
+              "total_tokens": 1230
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_service_status",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "",
+            "reward": 0.0,
+            "cumulative_reward": 0.0,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 5,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.254,
+            "token_usage": {
+              "prompt_tokens": 1267,
+              "completion_tokens": 23,
+              "total_tokens": 1290
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_service_status",
+            "parameters": {
+              "service": "postgres-primary"
+            }
+          },
+          "env_response": {
+            "tool_output": "Service: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections",
+            "reward": 0.0,
+            "cumulative_reward": 0.020000000000000004,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 4,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.182,
+            "token_usage": {
+              "prompt_tokens": 1378,
+              "completion_tokens": 22,
+              "total_tokens": 1400
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_service_status",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "",
+            "reward": 0.0,
+            "cumulative_reward": 0.0,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 7,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.385,
+            "token_usage": {
+              "prompt_tokens": 1437,
+              "completion_tokens": 22,
+              "total_tokens": 1459
+            }
+          },
+          "parsed_action": {
+            "tool_name": "get_service_status",
+            "parameters": {
+              "service": "user-service"
+            }
+          },
+          "env_response": {
+            "tool_output": "Service: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms",
+            "reward": 0.0,
+            "cumulative_reward": -0.009999999999999995,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 5,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms\n\nStep 5/20 | Cumulative reward: -0.01\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"payment-api\", \"query\": \"\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.502,
+            "token_usage": {
+              "prompt_tokens": 1568,
+              "completion_tokens": 26,
+              "total_tokens": 1594
+            }
+          },
+          "parsed_action": {
+            "tool_name": "query_logs",
+            "parameters": {
+              "service": "payment-api",
+              "query": ""
+            }
+          },
+          "env_response": {
+            "tool_output": "[2026-04-01T10:32:14Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:16Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:18Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:20Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:22Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:24Z] WARN - Health check failed: unable to reach database\n    at health.HealthCheckService.check(HealthCheckService.java:23)\n[2026-04-01T10:32:26Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:28Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:30Z] INFO - Application started: payment-api v2.3.1\n    at main.Application.start(Application.java:15)\n[2026-04-01T10:32:32Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)",
+            "reward": 0.0,
+            "cumulative_reward": 0.1,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 6,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms\n\nStep 5/20 | Cumulative reward: -0.01\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"payment-api\", \"query\": \"\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\n[2026-04-01T10:32:14Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:16Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:18Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:20Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:22Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:24Z] WARN - Health check failed: unable to reach database\n    at health.HealthCheckService.check(HealthCheckService.java:23)\n[2026-04-01T10:32:26Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:28Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:30Z] INFO - Application started: payment-api v2.3.1\n    at main.Application.start(Application.java:15)\n[2026-04-01T10:32:32Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n\nStep 6/20 | Cumulative reward: 0.10\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.268,
+            "token_usage": {
+              "prompt_tokens": 2142,
+              "completion_tokens": 28,
+              "total_tokens": 2170
+            }
+          },
+          "parsed_action": {
+            "tool_name": "query_metrics",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "",
+            "reward": 0.0,
+            "cumulative_reward": 0.0,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 10,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms\n\nStep 5/20 | Cumulative reward: -0.01\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"payment-api\", \"query\": \"\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\n[2026-04-01T10:32:14Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:16Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:18Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:20Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:22Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:24Z] WARN - Health check failed: unable to reach database\n    at health.HealthCheckService.check(HealthCheckService.java:23)\n[2026-04-01T10:32:26Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:28Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:30Z] INFO - Application started: payment-api v2.3.1\n    at main.Application.start(Application.java:15)\n[2026-04-01T10:32:32Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n\nStep 6/20 | Cumulative reward: 0.10\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.438,
+            "token_usage": {
+              "prompt_tokens": 2207,
+              "completion_tokens": 28,
+              "total_tokens": 2235
+            }
+          },
+          "parsed_action": {
+            "tool_name": "query_metrics",
+            "parameters": {
+              "service": "payment-api",
+              "metric": "error_rate"
+            }
+          },
+          "env_response": {
+            "tool_output": "Metric: error_rate\n  Values (recent): [('2026-04-01T10:20:00Z', '0.1%'), ('2026-04-01T10:22:00Z', '0.1%'), ('2026-04-01T10:24:00Z', '0.1%'), ('2026-04-01T10:25:00Z', '92.0%'), ('2026-04-01T10:26:00Z', '92.3%'), ('2026-04-01T10:28:00Z', '91.8%'), ('2026-04-01T10:30:00Z', '92.1%'), ('2026-04-01T10:32:00Z', '92.0%')]\n  Unit: percent\n  \u26a0 Spike at 10:25:00Z correlates with deploy v2.3.1",
+            "reward": 0.0,
+            "cumulative_reward": 0.21000000000000002,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 7,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms\n\nStep 5/20 | Cumulative reward: -0.01\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"payment-api\", \"query\": \"\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\n[2026-04-01T10:32:14Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:16Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:18Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:20Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:22Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:24Z] WARN - Health check failed: unable to reach database\n    at health.HealthCheckService.check(HealthCheckService.java:23)\n[2026-04-01T10:32:26Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:28Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:30Z] INFO - Application started: payment-api v2.3.1\n    at main.Application.start(Application.java:15)\n[2026-04-01T10:32:32Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n\nStep 6/20 | Cumulative reward: 0.10\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nMetric: error_rate\n  Values (recent): [('2026-04-01T10:20:00Z', '0.1%'), ('2026-04-01T10:22:00Z', '0.1%'), ('2026-04-01T10:24:00Z', '0.1%'), ('2026-04-01T10:25:00Z', '92.0%'), ('2026-04-01T10:26:00Z', '92.3%'), ('2026-04-01T10:28:00Z', '91.8%'), ('2026-04-01T10:30:00Z', '92.1%'), ('2026-04-01T10:32:00Z', '92.0%')]\n  Unit: percent\n  \u26a0 Spike at 10:25:00Z correlates with deploy v2.3.1\n\nStep 7/20 | Cumulative reward: 0.21\n\nRespond with your next action as JSON:"
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"connections\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": false,
+            "latency_seconds": 1.372,
+            "token_usage": {
+              "prompt_tokens": 2549,
+              "completion_tokens": 27,
+              "total_tokens": 2576
+            }
+          },
+          "parsed_action": {
+            "tool_name": "query_metrics",
+            "parameters": {}
+          },
+          "env_response": {
+            "tool_output": "",
+            "reward": 0.0,
+            "cumulative_reward": 0.0,
+            "done": false,
+            "error": ""
+          }
+        },
+        {
+          "step_number": 12,
+          "llm_call": {
+            "messages_sent": [
+              {
+                "role": "system",
+                "content": "You are an expert SRE agent triaging a production incident.\nYou have access to diagnostic tools. Respond with ONLY a single JSON object \u2014 no markdown, no explanation, no extra text.\n\nAvailable tools:\n- get_service_status: {\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"<name>\"}}\n- query_logs: {\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"<name>\", \"query\": \"<text filter, use empty string for all logs>\"}}\n- query_metrics: {\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"<name>\", \"metric\": \"<cpu|memory|error_rate|latency|connections>\"}}\n- get_dependency_map: {\"tool_name\": \"get_dependency_map\", \"parameters\": {\"service\": \"<name or omit for full map>\"}}\n- consult_runbook: {\"tool_name\": \"consult_runbook\", \"parameters\": {\"topic\": \"<search_topic>\"}}\n- check_recent_changes: {\"tool_name\": \"check_recent_changes\", \"parameters\": {\"service\": \"<name or omit for all>\"}}\n- submit_resolution: {\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed explanation>\", \"affected_service\": \"<primary ROOT CAUSE service>\", \"recommendation\": \"<specific actionable fix>\"}}\n\nINVESTIGATION PLAN \u2014 you have only 20 steps total, be extremely efficient:\nStep 1: get_dependency_map (no service param) to see full architecture\nStep 2: check_recent_changes (no service param) to see all recent deploys and changes\nStep 3-4: get_service_status for the UNHEALTHY/DEGRADED services mentioned in the incident\nStep 5-6: query_logs for unhealthy services (use \"\" as query to get all logs)\nStep 7-8: query_metrics for the suspicious root-cause service (error_rate, memory, connections)\nStep 9: submit_resolution with your findings\n\nCRITICAL RULES:\n- The ROOT CAUSE is often UPSTREAM \u2014 a dependency of the symptomatic service, not the alerted service itself\n- Look for: bad deployments, missing env vars, OOM/memory issues, connection pool exhaustion, long-running queries\n- affected_service MUST be the root-cause service, NOT the symptom service\n- root_cause must mention specific service names, error types, versions, and technical details\n- recommendation must be specific and actionable (e.g. rollback, increase memory limit, kill query, set timeout)\n- Do NOT repeat the same tool call \u2014 you already have that data\n- You MUST call submit_resolution by step 10 at the latest \u2014 do not keep investigating\n- Respond with ONLY a JSON object. No markdown fences, no explanation."
+              },
+              {
+                "role": "user",
+                "content": "INCIDENT: CRITICAL: payment-api returning HTTP 500 errors. Customer checkout failing. Started 10 minutes ago.\n\n--- AVAILABLE TOOL PARAMETERS ---\n  query_logs: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"severity_options\": [\"all\", \"error\", \"warning\", \"info\"]}\n  query_metrics: {\"services\": [\"payment-api\"], \"metrics\": [\"error_rate\", \"latency_p99\", \"request_count\", \"cpu\", \"memory\"]}\n  get_service_status: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"]}\n  get_dependency_map: {\"services\": [\"payment-api\", \"order-service\", \"user-service\", \"postgres-primary\"], \"note\": \"Omit service for full map\"}\n  consult_runbook: {\"topics\": [\"payment-api\"]}\n  check_recent_changes: {\"services\": [\"payment-api\", \"order-service\"], \"note\": \"Omit service for all changes\"}\n\nStep 0/20\n\nBegin your investigation. Respond with your first action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_dependency_map\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\npayment-api:\n  Depends on: postgres-primary, user-service\n  Depended on by: order-service\norder-service:\n  Depends on: payment-api, postgres-primary\nuser-service:\n  Depends on: postgres-primary\n  Depended on by: payment-api\npostgres-primary:\n  Depended on by: payment-api, order-service, user-service\n\nStep 1/20 | Cumulative reward: -0.03\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"check_recent_changes\", \"parameters\": {}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nNo recent changes found for service ''.\n\nStep 2/20 | Cumulative reward: -0.06\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"payment-api\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: payment-api\n  Status: UNHEALTHY\n  Error Rate: 92%\n  Uptime: 99.3% (30d)\n  Last Deploy: v2.3.1 deployed 8 minutes ago\n  Restarts (30min): 0\n  Latency (p99): timeout\n  Connections: 0 active DB connections\n\nStep 3/20 | Cumulative reward: 0.05\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"postgres-primary\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: postgres-primary\n  Status: HEALTHY\n  Error Rate: 0%\n  Uptime: 99.999% (30d)\n  Connections: 42 active connections\n\nStep 4/20 | Cumulative reward: 0.02\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"arguments\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"get_service_status\", \"parameters\": {\"service\": \"user-service\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nService: user-service\n  Status: HEALTHY\n  Error Rate: 0.05%\n  Uptime: 99.99% (30d)\n  Last Deploy: v1.8.2 deployed 5 days ago\n  Latency (p99): 45ms\n\nStep 5/20 | Cumulative reward: -0.01\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_logs\", \"parameters\": {\"service\": \"payment-api\", \"query\": \"\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\n[2026-04-01T10:32:14Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:16Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:18Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:20Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:22Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:24Z] WARN - Health check failed: unable to reach database\n    at health.HealthCheckService.check(HealthCheckService.java:23)\n[2026-04-01T10:32:26Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n[2026-04-01T10:32:28Z] ERROR - Failed to handle request POST /api/v1/payments: HTTP 500\n    at handler.PaymentHandler.processPayment(PaymentHandler.java:87)\n[2026-04-01T10:32:30Z] INFO - Application started: payment-api v2.3.1\n    at main.Application.start(Application.java:15)\n[2026-04-01T10:32:32Z] ERROR - NullPointerException: DB_CONNECTION_STRING is null\n    at config.DatabaseConfig.getConnection(DatabaseConfig.java:42)\n\nStep 6/20 | Cumulative reward: 0.10\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"parameters\": {\"service\": \"payment-api\", \"metric\": \"error_rate\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "Tool output:\nMetric: error_rate\n  Values (recent): [('2026-04-01T10:20:00Z', '0.1%'), ('2026-04-01T10:22:00Z', '0.1%'), ('2026-04-01T10:24:00Z', '0.1%'), ('2026-04-01T10:25:00Z', '92.0%'), ('2026-04-01T10:26:00Z', '92.3%'), ('2026-04-01T10:28:00Z', '91.8%'), ('2026-04-01T10:30:00Z', '92.1%'), ('2026-04-01T10:32:00Z', '92.0%')]\n  Unit: percent\n  \u26a0 Spike at 10:25:00Z correlates with deploy v2.3.1\n\nStep 7/20 | Cumulative reward: 0.21\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"tool_name\": \"query_metrics\", \"arguments\": {\"service\": \"payment-api\", \"metric\": \"connections\"}}\n</tool_call>"
+              },
+              {
+                "role": "user",
+                "content": "\nStep 0/20 | Cumulative reward: 0.00\n\nRespond with your next action as JSON:"
+              },
+              {
+                "role": "system",
+                "content": "URGENT: You MUST call submit_resolution NOW. No more investigation.\nSynthesize everything you have gathered. Your response MUST be ONLY:\n{\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"<detailed with service names, errors, versions>\", \"affected_service\": \"<the root cause service>\", \"recommendation\": \"<specific fix>\"}}\nDo NOT call any other tool. Submit NOW."
+              }
+            ],
+            "raw_output": "{\"tool_name\": \"submit_resolution\", \"parameters\": {\"root_cause\": \"payment-api v2.3.1 deployment 8 minutes ago introduced a missing environment variable DB_CONNECTION_STRING, causing NullPointerException in DatabaseConfig.getConnection (line 42) and cascading HTTP 500 errors. The database itself (postgres-primary) is healthy with 42 active connections, confirming the issue is configuration in payment-api, not upstream infrastructure.\", \"affected_service\": \"payment-api\", \"recommendation\": \"Rollback payment-api to v2.3.0 immediately, or inject the missing DB_CONNECTION_STRING environment variable into the payment-api deployment and restart the service.\"}}\n</tool_call>",
+            "parse_attempts": 1,
+            "forced_resolution": true,
+            "latency_seconds": 37.454,
+            "token_usage": {
+              "prompt_tokens": 2706,
+              "completion_tokens": 141,
+              "total_tokens": 2847
+            }
+          },
+          "parsed_action": {
+            "tool_name": "submit_resolution",
+            "parameters": {
+              "root_cause": "payment-api v2.3.1 deployment 8 minutes ago introduced a missing environment variable DB_CONNECTION_STRING, causing NullPointerException in DatabaseConfig.getConnection (line 42) and cascading HTTP 500 errors. The database itself (postgres-primary) is healthy with 42 active connections, confirming the issue is configuration in payment-api, not upstream infrastructure.",
+              "affected_service": "payment-api",
+              "recommendation": "Rollback payment-api to v2.3.0 immediately, or inject the missing DB_CONNECTION_STRING environment variable into the payment-api deployment and restart the service."
+            }
+          },
+          "env_response": {
+            "tool_output": "Resolution graded. Score: 0.95",
+            "reward": 0.0,
+            "cumulative_reward": 0.21000000000000002,
+            "done": true,
+            "error": ""
+          }
+        }
+      ]
+    },
+    {
+      "task_id": 2,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Timed out after 360s"
+    },
+    {
+      "task_id": 3,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Timed out after 360s"
+    }
+  ]
+}

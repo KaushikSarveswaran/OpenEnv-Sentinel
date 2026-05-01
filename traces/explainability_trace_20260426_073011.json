@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "model_name": "openai/gpt-oss-120b:novita",
+    "api_base_url": "https://router.huggingface.co/v1",
+    "env_url": "http://localhost:8000",
+    "timestamp": "2026-04-26T07:30:11.735976+00:00",
+    "total_tasks": 3,
+    "average_score": 0.001
+  },
+  "tasks": [
+    {
+      "task_id": 1,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+    },
+    {
+      "task_id": 2,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+    },
+    {
+      "task_id": 3,
+      "incident_summary": "",
+      "final_score": 0.001,
+      "total_steps": 0,
+      "total_llm_calls": 0,
+      "steps": [],
+      "error": "Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+    }
+  ]
+}
